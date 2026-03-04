@@ -14,7 +14,7 @@ sudo apt-get install -y python3-gpiozero
 
 echo "[2/6] Generating live_console.py..."
 cat << 'EOF' > $SCRIPT_DIR/live_console.py
-import os, sys, time, subprocess
+import os, sys, time, subprocess, signal
 from PIL import Image, ImageDraw, ImageFont
 
 if os.geteuid() != 0:
@@ -31,13 +31,17 @@ CONSOLE_FILE = '/dev/vcs1'
 TTY_DEVICE = '/dev/tty1'
 FONT_SIZE = 11
 COLS, ROWS = 35, 10
+FALLBACK_COLS, FALLBACK_ROWS = 120, 40
 
 def get_console_size():
     try:
         res = subprocess.run(['stty', 'size', '-F', TTY_DEVICE], capture_output=True, text=True, check=True)
         r, c = res.stdout.strip().split()
-        return int(r), int(c)
-    except: return 24, 80
+        r, c = int(r), int(c)
+        if r <= 15 or c <= 40:
+            return FALLBACK_ROWS, FALLBACK_COLS
+        return r, c
+    except: return FALLBACK_ROWS, FALLBACK_COLS
 
 def set_console_size(r, c):
     try: subprocess.run(['stty', 'cols', str(c), 'rows', str(r), '-F', TTY_DEVICE], check=True)
@@ -52,6 +56,10 @@ def get_virtual_console_text(columns=COLS, rows=ROWS):
     except Exception as e: return [f"Error:", str(e)]
 
 def main():
+    def handle_sigterm(*args):
+        raise KeyboardInterrupt()
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
     orig_rows, orig_cols = get_console_size()
     set_console_size(ROWS, COLS)
     
@@ -213,6 +221,7 @@ ExecStart=/usr/bin/python3 $SCRIPT_DIR/live_console.py
 User=root
 StandardOutput=inherit
 StandardError=inherit
+ExecStopPost=/bin/systemctl restart getty@tty1.service
 
 [Install]
 WantedBy=multi-user.target
