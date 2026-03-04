@@ -1,44 +1,64 @@
-This script provides a fully automated setup for running a system monitoring dashboard on a Raspberry Pi Zero 2W equipped with a Waveshare 2.13-inch e-Paper HAT+ (V3).
+# E-Paper Dashboard & Live Console Switch
 
-What This Script Does
-Hardware Setup: Automatically enables the SPI interface via raspi-config.
+> **Disclaimer:** I have no prior coding experience. All scripts and instructions in this project were created with the help of Gemini. Please review the code and use it at your own risk!
 
-Dependencies: Installs required system packages and Python libraries (Pillow, psutil, numpy, etc.).
+This project transforms a **Raspberry Pi Zero 2W** and a **Waveshare 2.13-inch e-Paper HAT+ (V3)** into a dual-purpose device. It functions as a system monitoring dashboard (featuring a dynamic ASCII cat!) and a live hardware Linux terminal. You can seamlessly toggle between the two modes using a physical GPIO push button.
 
-Drivers: Downloads and extracts the official Waveshare e-Paper libraries.
+## 🛠️ Hardware & Wiring Instructions
 
-Hardware Test: Runs the official V3 test script to verify your display is wired correctly.
+* **Raspberry Pi:** Zero 2W (running standard Raspberry Pi OS).
+* **Display:** Waveshare 2.13-inch e-Paper HAT+ (V3). Plugs directly into the top of the Pi's GPIO header.
+* **Push Button:** Any standard tactile push button.
+    * **Wire 1:** Connect to **Physical Pin 13 (GPIO 27)**.
+    * **Wire 2:** Connect to **Physical Pin 14 (Ground)**.
+    * *Note: No external resistor is needed. The software utilizes the Pi's internal pull-up resistor.*
 
-Dashboard Generation: Creates the cat_dash_v3.py script featuring a clock, CPU/Temp monitor, IP address, CPU history graph, and a dynamic ASCII cat pet.
+## 🚀 Installation
 
-Autostart Service: Wraps the Python script in a systemd service so it runs automatically in the background on every boot.
+These scripts will automatically enable the SPI interface, download the Waveshare drivers, test your screen, and install the required background services (`epaper_dash.service` and `epaper_console.service`).
 
-How to Run It
-1. Create the file
-Open a terminal on your Raspberry Pi and create a new script file:
-
-Bash
-nano install_dash.sh
-2. Paste the code
-Copy the installer bash script provided previously, paste it into the editor, then save and exit (Ctrl+O, Enter, Ctrl+X).
-
-3. Make it executable
-Grant the script permission to run:
-
-Bash
-chmod +x install_dash.sh
-4. Execute the installer
-Run the script (do not use sudo here; the script will ask for root permissions when it needs them):
+1. Download `install_dash.sh` and `install_button.sh` to your Pi.
+2. Grant execute permissions to the scripts:
+   ```bash
+   chmod +x install_dash.sh install_button.sh
+Run the scripts sequentially:
 
 Bash
 ./install_dash.sh
-Post-Installation Management
-Once installed, the dashboard runs as a background service. You can control it using standard systemctl commands:
+./install_button.sh
+🕹️ How to Use the System
 
-Check Status: sudo systemctl status epaper_dash.service
+Method A: Using the Physical Button (Automatic)
+Simply press the physical button wired to GPIO 27. The system will safely freeze the current display, clear the SPI bus, and seamlessly switch to the other mode.
 
-Stop Dashboard: sudo systemctl stop epaper_dash.service
+Note: The Live Console mirrors the Pi's primary HDMI output (/dev/tty1). To type on it, plug a USB keyboard directly into the Pi.
 
-Restart Dashboard: sudo systemctl restart epaper_dash.service
+Method B: Standalone/Manual Control (No Button Needed)
+If you don't want to wire a physical button, or if you prefer to control the screens remotely via SSH, you can use standard systemctl commands.
 
-View Live Logs: journalctl -u epaper_dash.service -f
+⚠️ CRITICAL RULE: E-Paper displays do not handle concurrent connections well. You must stop one service before starting the other, otherwise they will fight over the SPI bus and crash.
+
+To run the Dashboard independently:
+
+Bash
+sudo systemctl stop epaper_console.service
+sudo systemctl start epaper_dash.service
+To run the Live Console independently:
+
+Bash
+sudo systemctl stop epaper_dash.service
+sudo systemctl start epaper_console.service
+To stop all displays (put the screen to sleep):
+
+Bash
+sudo systemctl stop epaper_dash.service
+sudo systemctl stop epaper_console.service
+🐛 Useful Debugging Commands
+If a screen gets stuck or isn't updating, check the system logs to see what went wrong:
+
+Dashboard logs: journalctl -u epaper_dash.service -f
+
+Console logs: journalctl -u epaper_console.service -f
+
+Button listener logs: journalctl -u epaper_button.service -f
+   
