@@ -21,11 +21,11 @@ These scripts will automatically enable the SPI interface, download the Waveshar
 2. Grant execute permissions to the scripts:
    ```bash
    chmod +x install_dash.sh install_button.sh
-Run the scripts sequentially:
-
-Bash
+3. Run the scripts sequentially:
+```bash
 ./install_dash.sh
 ./install_button.sh
+
 🕹️ How to Use the System
 
 Method A: Using the Physical Button (Automatic)
