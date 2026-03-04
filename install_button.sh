@@ -9,10 +9,10 @@ USER_NAME=${SUDO_USER:-$(whoami)}
 SCRIPT_DIR="/home/$USER_NAME/e-Paper/RaspberryPi_JetsonNano/python/examples"
 
 # Ensure gpiozero is installed
-echo "[1/5] Checking dependencies (gpiozero)..."
+echo "[1/6] Checking dependencies (gpiozero)..."
 sudo apt-get install -y python3-gpiozero
 
-echo "[2/5] Generating live_console.py..."
+echo "[2/6] Generating live_console.py..."
 cat << 'EOF' > $SCRIPT_DIR/live_console.py
 import os, sys, time, subprocess
 from PIL import Image, ImageDraw, ImageFont
@@ -93,17 +93,57 @@ if __name__ == "__main__":
     main()
 EOF
 
-echo "[3/5] Generating button_toggler.py..."
+echo "[3/6] Generating shutdown_screen.py..."
+cat << 'EOF' > $SCRIPT_DIR/shutdown_screen.py
+import os
+import sys
+from PIL import Image, ImageDraw, ImageFont
+
+base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+lib_dir = os.path.join(base_dir, 'lib')
+if os.path.exists(lib_dir):
+    sys.path.append(lib_dir)
+
+from waveshare_epd import epd2in13_V3
+
+def main():
+    try:
+        epd = epd2in13_V3.EPD()
+        epd.init()
+        epd.Clear(0xFF) 
+
+        image = Image.new('1', (epd.height, epd.width), 255)
+        draw = ImageDraw.Draw(image)
+
+        font_lg = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 20)
+        font_sm = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 14)
+
+        draw.text((25, 30), "SYSTEM OFFLINE", font=font_lg, fill=0)
+        draw.text((20, 65), "It is safe to unplug power.", font=font_sm, fill=0)
+        draw.text((95, 95), "Z z z . . .", font=font_sm, fill=0)
+
+        epd.display(epd.getbuffer(image))
+        epd.sleep()
+
+    except Exception as e:
+        print(f"Error drawing shutdown screen: {e}")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+echo "[4/6] Generating button_toggler.py..."
 cat << 'EOF' > $SCRIPT_DIR/button_toggler.py
 import subprocess
 import time
+import os
 from gpiozero import Button
 from signal import pause
 
 # Define the GPIO pin
 BUTTON_PIN = 27
 
-# Setup the button (added hold_time=5 for the shutdown feature)
+# Setup the button (hold_time=5 for the shutdown feature)
 button = Button(BUTTON_PIN, bounce_time=0.3, hold_time=5)
 
 def is_service_active(service_name):
@@ -133,6 +173,13 @@ def shutdown_pi():
     subprocess.run(['sudo', 'systemctl', 'stop', 'epaper_dash.service'])
     subprocess.run(['sudo', 'systemctl', 'stop', 'epaper_console.service'])
     
+    # Brief pause to ensure SPI bus is completely released
+    time.sleep(1) 
+    
+    # Draw the final offline screen
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    subprocess.run(['sudo', '/usr/bin/python3', f'{script_dir}/shutdown_screen.py'])
+    
     # Send the shutdown command to Linux
     subprocess.run(['sudo', 'shutdown', 'now'])
 
@@ -148,7 +195,7 @@ print(" - Hold for 5 seconds to shutdown")
 pause()
 EOF
 
-echo "[4/5] Creating Systemd Services..."
+echo "[5/6] Creating Systemd Services..."
 # 1. Console Service
 sudo bash -c "cat << EOF_SERVICE > /etc/systemd/system/epaper_console.service
 [Unit]
@@ -182,13 +229,14 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF_SERVICE"
 
-echo "[5/5] Reloading systemd and enabling Button Service..."
+echo "[6/6] Reloading systemd and enabling Button Service..."
 sudo systemctl daemon-reload
 # We do NOT enable the console service at boot, only the button listener
 sudo systemctl enable epaper_button.service
-sudo systemctl start epaper_button.service
+sudo systemctl restart epaper_button.service
 
 echo "=========================================="
 echo "  Success! Press your button on GPIO 27   "
 echo "  to toggle between the Dashboard & CLI!  "
+echo "  Hold for 5 seconds to safely shutdown.  "
 echo "=========================================="
