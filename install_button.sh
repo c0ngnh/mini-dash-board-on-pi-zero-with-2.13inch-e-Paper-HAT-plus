@@ -119,7 +119,7 @@ def main():
         font_sm = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 14)
 
         draw.text((25, 30), "SYSTEM OFFLINE", font=font_lg, fill=0)
-        draw.text((20, 65), "It is safe to unplug power.", font=font_sm, fill=0)
+        draw.text((20, 65), "It is safe to unplug power in next 10 seconds...", font=font_sm, fill=0)
         draw.text((95, 95), "Z z z . . .", font=font_sm, fill=0)
 
         epd.display(epd.getbuffer(image))
