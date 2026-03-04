@@ -121,7 +121,7 @@ def main():
         draw.text((25, 30), "SYSTEM OFFLINE", font=font_lg, fill=0)
         
         # Auto-calculate the exact center for the long middle line
-        msg = "You can unplug power in next 10 secs!"
+        msg = "Safe to unplug power in 10 seconds!"
         msg_width = draw.textlength(msg, font=font_sm)
         x_center = (image.width - msg_width) / 2
         draw.text((x_center, 65), msg, font=font_sm, fill=0)
