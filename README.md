@@ -22,7 +22,45 @@ These scripts will automatically enable the SPI interface, download the Waveshar
    ```bash
    chmod +x install_dash.sh install_button.sh
 3. Run the scripts sequentially:
-```bash
-./install_dash.sh
-./install_button.sh
+   ```bash
+   ./install_dash.sh
+   ./install_button.sh
 
+
+🕹️ How to Use the System
+Method A: Using the Physical Button (Automatic)
+Simply press the physical button wired to GPIO 27. The system will safely freeze the current display, clear the SPI bus, and seamlessly switch to the other mode.
+
+Note: The Live Console mirrors the Pi's primary HDMI output (/dev/tty1). To type on it, plug a USB keyboard directly into the Pi.
+
+Method B: Standalone/Manual Control (No Button Needed)
+If you don't want to wire a physical button, or if you prefer to control the screens remotely via SSH, you can use standard systemctl commands.
+
+⚠️ CRITICAL RULE: E-Paper displays do not handle concurrent connections well. You must stop one service before starting the other, otherwise they will fight over the SPI bus and crash.
+
+To run the Dashboard independently:
+
+Bash
+sudo systemctl stop epaper_console.service
+sudo systemctl start epaper_dash.service
+To run the Live Console independently:
+
+Bash
+sudo systemctl stop epaper_dash.service
+sudo systemctl start epaper_console.service
+To stop all displays (put the screen to sleep):
+
+Bash
+sudo systemctl stop epaper_dash.service
+sudo systemctl stop epaper_console.service
+🐛 Useful Debugging Commands
+If a screen gets stuck or isn't updating, check the system logs to see what went wrong:
+
+Dashboard logs: journalctl -u epaper_dash.service -f
+
+Console logs: journalctl -u epaper_console.service -f
+
+Button listener logs: journalctl -u epaper_button.service -f
+
+
+Would you like any help adding screenshots or images to your README file before you finalize it?
